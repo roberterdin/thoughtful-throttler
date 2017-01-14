@@ -18,9 +18,12 @@ package eu.erdin.throttler;
 
 
 import co.paralleluniverse.fibers.Suspendable;
+import co.paralleluniverse.fibers.httpclient.FiberHttpClientBuilder;
 import co.paralleluniverse.fibers.servlet.FiberHttpServlet;
 import org.apache.http.*;
 import org.apache.http.client.HttpClient;
+import org.apache.http.client.config.CookieSpecs;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.AbortableHttpRequest;
 import org.apache.http.client.params.ClientPNames;
 import org.apache.http.client.params.CookiePolicy;
@@ -121,6 +124,19 @@ public class SmileyFiberProxyServlet extends FiberHttpServlet {
     private URI targetUriObj;//new URI(targetUri)
     private HttpHost targetHost;//URIUtils.extractHost(targetUriObj);
 
+
+    private static String NO_FORWARD_RESPONSE = "<!DOCTYPE html>\n" +
+            "<html>" +
+            "  <head>" +
+            "    <meta charset=\"UTF-8\">" +
+            "    <title>Thoughtful Throttler</title>" +
+            "  </head>" +
+            "  <body>" +
+            " <h1>sorry, overload</h1> " +
+            "  </body>" +
+            "</html>";
+
+    private Throttler throttler = new RandomThrottler();
     private HttpClient proxyClient;
 
     @Override
@@ -199,34 +215,34 @@ public class SmileyFiberProxyServlet extends FiberHttpServlet {
      */
     private HttpClient createHttpClient(HttpParams hcParams) {
 
-        try {
-            //as of HttpComponents v4.2, this class is better since it uses System
-            // Properties:
-            Class<?> clientClazz = Class.forName("org.apache.http.impl.client.SystemDefaultHttpClient");
-            Constructor<?> constructor = clientClazz.getConstructor(HttpParams.class);
-            return (HttpClient) constructor.newInstance(hcParams);
-        } catch (ClassNotFoundException e) {
-            //no problem; use v4.1 below
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+//        try {
+//            //as of HttpComponents v4.2, this class is better since it uses System
+//            // Properties:
+//            Class<?> clientClazz = Class.forName("org.apache.http.impl.client.SystemDefaultHttpClient");
+//            Constructor<?> constructor = clientClazz.getConstructor(HttpParams.class);
+//            return (HttpClient) constructor.newInstance(hcParams);
+//        } catch (ClassNotFoundException e) {
+//            //no problem; use v4.1 below
+//        } catch (Exception e) {
+//            throw new RuntimeException(e);
+//        }
 
-        //Fallback on using older client:
-        return new DefaultHttpClient(new ThreadSafeClientConnManager(), hcParams);
+//        //Fallback on using older client:
+//        return new DefaultHttpClient(new ThreadSafeClientConnManager(), hcParams);
 
 
-//        RequestConfig requestConfig = RequestConfig.custom()
-//                .setRedirectsEnabled(false)
-//                .setCookieSpec(CookieSpecs.IGNORE_COOKIES)
-//                .build();
-//
-//
-//        return FiberHttpClientBuilder
-//                .create(2)
-//                .setDefaultRequestConfig(requestConfig)
-//                .setMaxConnPerRoute(2)
-//                .setMaxConnTotal(2)
-//                .build();
+        RequestConfig requestConfig = RequestConfig.custom()
+                .setRedirectsEnabled(false)
+                .setCookieSpec(CookieSpecs.IGNORE_COOKIES)
+                .build();
+
+
+        return FiberHttpClientBuilder
+                .create(2)
+                .setDefaultRequestConfig(requestConfig)
+                .setMaxConnPerRoute(2)
+                .setMaxConnTotal(2)
+                .build();
 
     }
 
@@ -280,8 +296,18 @@ public class SmileyFiberProxyServlet extends FiberHttpServlet {
 
     @Override
     @Suspendable
-    protected void service(HttpServletRequest servletRequest, HttpServletResponse servletResponse)
+    protected void service(HttpServletRequest servletRequest,
+                           HttpServletResponse servletResponse)
             throws ServletException, IOException {
+
+
+        if (!throttler.forward(servletRequest)){
+            servletResponse.getWriter().write(SmileyFiberProxyServlet.NO_FORWARD_RESPONSE);
+            return;
+        }
+
+
+
         //initialize request attributes from caches if unset by a subclass by this point
         if (servletRequest.getAttribute(ATTR_TARGET_URI) == null) {
             servletRequest.setAttribute(ATTR_TARGET_URI, targetUri);

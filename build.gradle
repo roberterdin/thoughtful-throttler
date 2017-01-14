@@ -14,14 +14,7 @@ ext.quasarVer     = '0.7.7'
 ext.comsatVer     = '0.5.0'
 ext.metricsVer    = '3.1.2'
 ext.servletVer    = '3.1.0'
-ext.tomcatVer     = '8.0.26'
 ext.jettyVer      = '9.3.8.v20160314'
-ext.h2Ver         = '1.4.188'
-ext.spaceBaseVer  = '2.3-SNAPSHOT'
-ext.slf4jVer      = '1.7.12'
-ext.jdbiVer       = '2.63.1'
-ext.httpCoreVer   = '4.4.1'
-ext.httpClientVer = '4.5'
 
 
 
@@ -52,6 +45,9 @@ dependencies {
     compile "org.eclipse.jetty:jetty-webapp:$jettyVer"
     compile "org.eclipse.jetty.websocket:javax-websocket-server-impl:$jettyVer"
 
+    testCompile  group: 'io.gatling', name: 'gatling-core', version: '2.2.3'
+    testCompile  group: 'io.gatling', name: 'gatling-http', version: '2.2.3'
+
 //    compile project(':test-servlet')
 //    compile project(':comsat-examples-servlet')
 
@@ -66,14 +62,14 @@ tasks.withType(JavaExec) {
     jvmArgs '-server'
     // jvmArgs "-javaagent:${configurations.quasar.iterator().next()}" // =vdmc (verbose, debug, allow monitors, check class)
     // systemProperty "co.paralleluniverse.fibers.DefaultFiberPool.parallelism", "4"
-    systemProperty "co.paralleluniverse.fibers.DefaultFiberPool.monitor", "JMX" // "METRICS" // "NONE" //
+//    systemProperty "co.paralleluniverse.fibers.DefaultFiberPool.monitor", "JMX" // "METRICS" // "NONE" //
     systemProperty "co.paralleluniverse.actors.moduleDir", "${rootProject.projectDir}/modules"
 
     // memory
-    jvmArgs '-Xmx1024m'
-    jvmArgs '-XX:+UseParallelGC'
-    jvmArgs '-XX:+UseCondCardMark'
-    // jvmArgs '-XX:+UseG1GC', '-XX:MaxGCPauseMillis=50'
+    jvmArgs '-Xmx4096m'
+//    jvmArgs '-XX:+UseParallelGC'
+//    jvmArgs '-XX:+UseCondCardMark'
+     jvmArgs '-XX:+UseG1GC', '-XX:MaxGCPauseMillis=50'
 
     // profiling
     // jvmArgs '-XX:+UnlockCommercialFeatures', '-XX:+FlightRecorder'
@@ -101,7 +97,9 @@ run {
     standardInput = System.in
     jvmArgs "-javaagent:${configurations.quasar.iterator().next()}" // =v, =d
     jvmArgs "-ea"
-    systemProperty 'co.paralleluniverse.fibers.verifyInstrumentation', 'true'
+
+    // verify fiber instrumentation
+//    systemProperty 'co.paralleluniverse.fibers.verifyInstrumentation', 'true'
 }
 
 defaultTasks 'run'
