@@ -1,0 +1,107 @@
+import org.gradle.api.artifacts.*
+
+group 'eu.erdin'
+version '0.1-SNAPSHOT'
+
+apply plugin: 'java'
+apply plugin: 'base' //
+apply plugin: 'maven'
+apply plugin: 'application'
+apply plugin: 'war'
+
+
+ext.quasarVer     = '0.7.7'
+ext.comsatVer     = '0.5.0'
+ext.metricsVer    = '3.1.2'
+ext.servletVer    = '3.1.0'
+ext.tomcatVer     = '8.0.26'
+ext.jettyVer      = '9.3.8.v20160314'
+ext.h2Ver         = '1.4.188'
+ext.spaceBaseVer  = '2.3-SNAPSHOT'
+ext.slf4jVer      = '1.7.12'
+ext.jdbiVer       = '2.63.1'
+ext.httpCoreVer   = '4.4.1'
+ext.httpClientVer = '4.5'
+
+
+
+sourceCompatibility = '1.7'
+[compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
+
+repositories {
+    mavenLocal();
+    mavenCentral();
+    maven { url "https://oss.sonatype.org/content/repositories/releases" }
+    maven { url "https://oss.sonatype.org/content/repositories/snapshots" }
+}
+
+configurations {
+    quasar
+}
+
+dependencies {
+    runtime  "co.paralleluniverse:quasar-core:$quasarVer"
+    testCompile group: 'junit', name: 'junit', version: '4.11'
+
+    compile "co.paralleluniverse:quasar-core:$quasarVer"
+    compile "co.paralleluniverse:comsat-servlet:$comsatVer"
+    compile "co.paralleluniverse:comsat-jax-rs-client:$comsatVer"
+    compile "co.paralleluniverse:comsat-httpclient:$comsatVer"
+    compile "org.eclipse.jetty:jetty-server:$jettyVer"
+    compile "org.eclipse.jetty:jetty-servlet:$jettyVer"
+    compile "org.eclipse.jetty:jetty-webapp:$jettyVer"
+    compile "org.eclipse.jetty.websocket:javax-websocket-server-impl:$jettyVer"
+
+//    compile project(':test-servlet')
+//    compile project(':comsat-examples-servlet')
+
+    quasar  "co.paralleluniverse:quasar-core:$quasarVer"
+
+    providedCompile "co.paralleluniverse:quasar-core:$quasarVer"
+    providedCompile "javax.servlet:javax.servlet-api:$servletVer"
+}
+
+
+tasks.withType(JavaExec) {
+    jvmArgs '-server'
+    // jvmArgs "-javaagent:${configurations.quasar.iterator().next()}" // =vdmc (verbose, debug, allow monitors, check class)
+    // systemProperty "co.paralleluniverse.fibers.DefaultFiberPool.parallelism", "4"
+    systemProperty "co.paralleluniverse.fibers.DefaultFiberPool.monitor", "JMX" // "METRICS" // "NONE" //
+    systemProperty "co.paralleluniverse.actors.moduleDir", "${rootProject.projectDir}/modules"
+
+    // memory
+    jvmArgs '-Xmx1024m'
+    jvmArgs '-XX:+UseParallelGC'
+    jvmArgs '-XX:+UseCondCardMark'
+    // jvmArgs '-XX:+UseG1GC', '-XX:MaxGCPauseMillis=50'
+
+    // profiling
+    // jvmArgs '-XX:+UnlockCommercialFeatures', '-XX:+FlightRecorder'
+    // jvmArgs '-verbose:gc'
+    // jvmArgs '-XX:+UnlockDiagnosticVMOptions', '-XX:+TraceClassLoading', '-XX:+LogCompilation' // use with jitwatch
+    // jvmArgs '-XX:+UnlockDiagnosticVMOptions', '-XX:+PrintInlining'
+
+    // logging
+    systemProperty "log4j.configurationFile", "${rootProject.projectDir}/log4j.xml"
+    // systemProperty "Log4jContextSelector", "org.apache.logging.log4j.core.async.AsyncLoggerContextSelector"
+
+    // debugging
+    // jvmArgs '-ea'
+    // systemProperty "co.paralleluniverse.debugMode", "true"
+    // systemProperty "co.paralleluniverse.globalFlightRecorder", "true"
+    // systemProperty "co.paralleluniverse.flightRecorderDumpFile", "spaceships.log"
+    // systemProperty "co.paralleluniverse.monitoring.flightRecorderSize","100000"
+}
+
+run {
+    if (project.hasProperty('mainClass') && mainClass != '')
+        main = mainClass
+    else
+        main = 'eu.erdin.throttler.EmbeddedServer'
+    standardInput = System.in
+    jvmArgs "-javaagent:${configurations.quasar.iterator().next()}" // =v, =d
+    jvmArgs "-ea"
+    systemProperty 'co.paralleluniverse.fibers.verifyInstrumentation', 'true'
+}
+
+defaultTasks 'run'
