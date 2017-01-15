@@ -20,6 +20,7 @@ package eu.erdin.throttler;
 import co.paralleluniverse.fibers.Suspendable;
 import co.paralleluniverse.fibers.httpclient.FiberHttpClientBuilder;
 import co.paralleluniverse.fibers.servlet.FiberHttpServlet;
+import eu.erdin.throttler.implementations.RandomThrottler;
 import org.apache.http.*;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.config.CookieSpecs;
@@ -29,8 +30,6 @@ import org.apache.http.client.params.ClientPNames;
 import org.apache.http.client.params.CookiePolicy;
 import org.apache.http.client.utils.URIUtils;
 import org.apache.http.entity.InputStreamEntity;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.impl.conn.tsccm.ThreadSafeClientConnManager;
 import org.apache.http.message.BasicHeader;
 import org.apache.http.message.BasicHttpEntityEnclosingRequest;
 import org.apache.http.message.BasicHttpRequest;
@@ -46,7 +45,6 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.lang.reflect.Constructor;
 import java.net.HttpCookie;
 import java.net.URI;
 import java.util.BitSet;
@@ -301,7 +299,7 @@ public class SmileyFiberProxyServlet extends FiberHttpServlet {
             throws ServletException, IOException {
 
 
-        if (!throttler.forward(servletRequest)){
+        if (!throttler.forward(servletRequest, servletResponse)){
             servletResponse.getWriter().write(SmileyFiberProxyServlet.NO_FORWARD_RESPONSE);
             return;
         }
